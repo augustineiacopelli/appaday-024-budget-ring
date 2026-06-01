@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Ring — AppADay #024</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #242424;
+    --text: #f0ece4;
+    --muted: #6b6560;
+    --accent: #e8c97a;
+    --colors: #e8c97a, #e87a7a, #7ae8b8, #7aaee8, #c87ae8, #e8a07a, #7ae8e2, #b4e87a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  .site-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .site-header a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .site-header a:hover { color: var(--accent); }
+  .site-header span { color: var(--border); font-size: 11px; }
+  .site-header .app-id {
+    color: var(--accent);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+  }
+
+  /* LAYOUT */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 32px 20px;
+    align-items: start;
+  }
+
+  /* LEFT: CHART */
+  .chart-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    position: sticky;
+    top: 32px;
+  }
+
+  .title-block {
+    text-align: center;
+  }
+  .title-block h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 6vw, 52px);
+    letter-spacing: 0.08em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .title-block p {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .donut-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+  }
+  #donutCanvas {
+    width: 220px;
+    height: 220px;
+  }
+  .donut-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .donut-center .total-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .donut-center .total-amount {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+
+  /* LEGEND */
+  .legend {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 220px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .legend-item.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-name {
+    font-size: 12px;
+    color: var(--text);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .legend-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  /* RIGHT: INPUTS */
+  .input-side {
+    padding-left: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .input-side h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  #categoriesWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.25s ease forwards;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .color-pip {
+    width: 12px;
+    height: 32px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .cat-name {
+    flex: 1.5;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .cat-name:focus { border-color: var(--accent); }
+  .cat-name::placeholder { color: var(--muted); }
+
+  .cat-amount {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 0;
+  }
+  .cat-amount:focus { border-color: var(--accent); }
+  .cat-amount::placeholder { color: var(--muted); font-size: 13px; font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
+
+  .remove-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.2s, color 0.2s;
+    padding: 0;
+  }
+  .remove-btn:hover { border-color: #e87a7a; color: #e87a7a; }
+
+  .add-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px;
+    transition: border-color 0.2s, color 0.2s;
+    width: 100%;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .add-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    padding: 40px 0;
+    text-transform: uppercase;
+  }
+
+  /* SETTINGS GEAR */
+  .gear-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .gear-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* MODAL */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    width: min(380px, calc(100vw - 40px));
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-header h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.1em;
+    color: var(--text);
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .modal input[type="email"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .modal input[type="email"]:focus { border-color: var(--accent); }
+  .modal input[type="email"]::placeholder { color: var(--muted); }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-save {
+    flex: 1;
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: #0a0a0a;
+    cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    padding: 10px;
+    transition: opacity 0.2s;
+  }
+  .btn-save:hover { opacity: 0.85; }
+  .btn-email {
+    flex: 1;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    padding: 10px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-email:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-email:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  @media (max-width: 600px) {
+    .main {
+      grid-template-columns: 1fr;
+      padding: 24px 16px;
+      gap: 32px;
+    }
+    .chart-side { position: static; }
+    .input-side { padding-left: 0; }
+    .donut-wrap { width: 200px; height: 200px; }
+    #donutCanvas { width: 200px; height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="https://augustineiacopelli.github.io">AppADay</a>
+  <span>›</span>
+  <span class="app-id">#024</span>
+  <span>›</span>
+  <a href="#">Budget Ring</a>
+</header>
+
+<main class="main">
+  <div class="chart-side">
+    <div class="title-block">
+      <h1>Budget Ring</h1>
+      <p>Spending at a glance</p>
+    </div>
+    <div class="donut-wrap">
+      <canvas id="donutCanvas" width="440" height="440"></canvas>
+      <div class="donut-center">
+        <div class="total-label">Total</div>
+        <div class="total-amount" id="totalDisplay">$0</div>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="input-side">
+    <div style="display:flex;align-items:center;">
+      <h2>Categories</h2>
+      <button class="gear-btn" onclick="openSettings()" title="Settings" aria-label="Settings">⚙️</button>
+    </div>
+    <div id="categoriesWrap"></div>
+    <button class="add-btn" id="addBtn" onclick="addCategory()">+ Add Category</button>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="settingsModal" onclick="handleBackdropClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Settings</h3>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <label>
+      Report Email Address
+      <input type="email" id="emailInput" placeholder="you@example.com">
+    </label>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+      <button class="btn-email" id="sendBtn" onclick="sendReport()">Email Report</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#e8c97a','#e87a7a','#7ae8b8','#7aaee8','#c87ae8','#e8a07a','#7ae8e2','#b4e87a'];
+let categories = [];
+
+function addCategory(name = '', amount = '') {
+  if (categories.length >= 8) return;
+  categories.push({ name, amount });
+  render();
+  // Focus the new name input
+  const rows = document.querySelectorAll('.cat-row');
+  const last = rows[rows.length - 1];
+  if (last) last.querySelector('.cat-name').focus();
+}
+
+function removeCategory(i) {
+  categories.splice(i, 1);
+  render();
+}
+
+function updateCategory(i, field, value) {
+  categories[i][field] = value;
+  drawChart();
+}
+
+function render() {
+  const wrap = document.getElementById('categoriesWrap');
+  wrap.innerHTML = '';
+
+  if (categories.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">Add a category to begin</div>';
+  }
+
+  categories.forEach((cat, i) => {
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = `
+      <div class="color-pip" style="background:${COLORS[i]}"></div>
+      <input class="cat-name" type="text" placeholder="Category name" value="${escHtml(cat.name)}" 
+             oninput="updateCategory(${i},'name',this.value)" maxlength="24">
+      <input class="cat-amount" type="number" placeholder="0" value="${cat.amount}" min="0" step="any"
+             oninput="updateCategory(${i},'amount',this.value)">
+      <button class="remove-btn" onclick="removeCategory(${i})" aria-label="Remove">✕</button>
+    `;
+    wrap.appendChild(row);
+  });
+
+  document.getElementById('addBtn').disabled = categories.length >= 8;
+  drawChart();
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function drawChart() {
+  const canvas = document.getElementById('donutCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const data = categories.map((c, i) => ({
+    name: c.name || `Category ${i+1}`,
+    value: Math.max(0, parseFloat(c.amount) || 0),
+    color: COLORS[i]
+  })).filter(d => d.value > 0);
+
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  // Update total display
+  const totalEl = document.getElementById('totalDisplay');
+  totalEl.textContent = total > 0 ? '$' + total.toLocaleString('en-US', {maximumFractionDigits: 2}) : '$0';
+
+  // Empty ring
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, W*0.38, 0, Math.PI*2);
+    ctx.strokeStyle = '#1e1e1e';
+    ctx.lineWidth = W * 0.16;
+    ctx.stroke();
+    updateLegend([]);
+    return;
+  }
+
+  // Draw segments
+  const gap = 0.018;
+  let angle = -Math.PI / 2;
+  const radius = W * 0.38;
+  const lineW = W * 0.16;
+
+  data.forEach(d => {
+    const slice = (d.value / total) * (Math.PI * 2 - gap * data.length);
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, radius, angle + gap/2, angle + slice + gap/2);
+    ctx.strokeStyle = d.color;
+    ctx.lineWidth = lineW;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
+    angle += slice + gap;
+  });
+
+  updateLegend(data, total);
+}
+
+function updateLegend(data, total) {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  data.forEach((d, i) => {
+    const pct = ((d.value / total) * 100).toFixed(1);
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <div class="legend-dot" style="background:${d.color}"></div>
+      <span class="legend-name">${escHtml(d.name)}</span>
+      <span class="legend-pct">${pct}%</span>
+    `;
+    legend.appendChild(item);
+    setTimeout(() => item.classList.add('visible'), i * 40);
+  });
+}
+
+// Settings
+function lsGet(key) { try { return localStorage.getItem(key) || ''; } catch(e) { return ''; } }
+function lsSet(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+
+let reportEmail = lsGet('budgetring_email');
+
+function openSettings() {
+  document.getElementById('emailInput').value = reportEmail;
+  document.getElementById('settingsModal').classList.add('open');
+  updateSendBtn();
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+function handleBackdropClick(e) {
+  if (e.target === document.getElementById('settingsModal')) closeSettings();
+}
+function saveSettings() {
+  reportEmail = document.getElementById('emailInput').value.trim();
+  lsSet('budgetring_email', reportEmail);
+  updateSendBtn();
+  closeSettings();
+}
+function updateSendBtn() {
+  document.getElementById('sendBtn').disabled = !document.getElementById('emailInput').value.trim();
+}
+function sendReport() {
+  if (!reportEmail) return;
+  const data = categories.map((c, i) => ({
+    name: c.name || `Category ${i+1}`,
+    value: Math.max(0, parseFloat(c.amount) || 0),
+    color: COLORS[i]
+  })).filter(d => d.value > 0);
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const subject = encodeURIComponent('Budget Ring Report');
+  let body = 'BUDGET RING REPORT\n\n';
+  data.forEach(d => {
+    const pct = ((d.value / total) * 100).toFixed(1);
+    body += `${d.name}: $${d.value.toLocaleString('en-US', {maximumFractionDigits:2})} (${pct}%)\n`;
+  });
+  body += `\nTOTAL: $${total.toLocaleString('en-US', {maximumFractionDigits:2})}`;
+  window.location.href = `mailto:${encodeURIComponent(reportEmail)}?subject=${subject}&body=${encodeURIComponent(body)}`;
+}
+
+
+addCategory('Housing', '1800');
+addCategory('Food', '600');
+addCategory('Transport', '350');
+addCategory('Savings', '500');
+addCategory('Fun', '200');
+</script>
+</body>
+</html>
